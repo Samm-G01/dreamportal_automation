@@ -1,25 +1,30 @@
 # Dream Portal QA Automation
 
-## Overview
+## About this project
 
-This project contains automated UI tests for the Dream Portal website using Selenium WebDriver with Java and TestNG.
+This project has automated UI tests for the Dream Portal website, written with Selenium WebDriver, Java and TestNG.
 
-The automation verifies the main website flow, Dream Diary data, Dream Summary information, recurring dreams, and loading behavior. It also includes an AI-based validation that classifies each dream name as Good or Bad using a Large Language Model (LLM) and compares the result with the Dream Diary table.
+Website: https://arjitnigam.github.io/myDreams/
 
-**Application:** https://arjitnigam.github.io/myDreams/
+The tests check:
 
-## Tech Stack
+* the home page and its loading animation
+* the Dream Diary table
+* the Dream Summary numbers and recurring dreams
+* (bonus) whether an AI model agrees with the Good/Bad type shown in the diary
+
+## Tech used
 
 * Java 17
 * Selenium WebDriver 4.34.0
 * TestNG 7.10.2
 * Maven
-* WebDriverManager
-* Gson (JSON parsing for the AI API response)
-* Groq API with the `openai/gpt-oss-20b` model (AI validation)
-* Chrome Browser
+* WebDriverManager (downloads ChromeDriver automatically)
+* Gson (reads the AI response)
+* Groq API for the AI check
+* Chrome browser
 
-## Project Structure
+## Project structure
 
 ```text
 src
@@ -42,121 +47,63 @@ src
             └── AIClassifier.java
 ```
 
-## Page Object Model
+## How it is built (Page Object Model)
 
-The project follows the Page Object Model (POM) design pattern.
+Each page of the website has its own class in the `pages` folder. These classes find elements and read data from the page. The test classes only decide what is expected and do the assertions. This way, if something on a page changes, I only have to fix it in one place.
 
-### HomePage
+* **HomePage** - opens the site, handles the My Dreams button and the loading animation
+* **DiaryPage** - reads the dream table (count, name, days ago, type) and counts how often a dream appears
+* **TotalDreamsPage** - reads the Good, Bad, Total and Recurring dream numbers
+* **DriverFactory** - starts and closes Chrome
+* **BaseTest** - common setup and cleanup for every test, and takes a screenshot when a test fails
 
-Handles:
+## What the tests check
 
-* Opening the Dream Portal
-* My Dreams button
-* Loading animation
-* Opening Dream Diary and Dream Summary pages
+**Home page**
 
-### DiaryPage
+1. The My Dreams button is visible.
+2. The loading animation appears and then disappears.
+3. The main content shows after loading.
+4. Clicking My Dreams opens the Dream Diary and Dream Summary pages in new tabs.
 
-Handles:
+**Dream Diary**
 
-* Dream table
-* Dream count
-* Dream name
-* Days ago
-* Dream type
-* Recurring dream validation
+1. There are exactly 10 dreams.
+2. Every row has a Dream Name, Days Ago and Dream Type.
+3. Dream Type is only Good or Bad.
+4. "Flying over mountains" and "Lost in maze" are recurring (they appear more than once).
 
-### TotalDreamsPage
+**Dream Summary**
 
-Handles:
+* Good Dreams: 6
+* Bad Dreams: 4
+* Total Dreams: 10
+* Recurring Dreams: 2
 
-* Good Dreams count
-* Bad Dreams count
-* Total Dreams count
-* Recurring Dreams count
+**AI check (bonus)**
 
-### DriverFactory
+The AI's Good/Bad answer for each dream name is compared with the type in the diary table.
 
-Manages WebDriver creation and cleanup.
+## AI check
 
-### BaseTest
+For the bonus part, `AIValidationTest` does this:
 
-Provides common test setup and teardown.
+1. Opens the Dream Diary and reads each dream name and its type.
+2. Sends each dream name to an AI model and asks for one word: Good or Bad.
+3. Compares the AI answer with the type in the table.
 
-Failure screenshots are automatically captured and stored under:
+I used the Groq API with the `openai/gpt-oss-20b` model. In my run, all 10 dreams matched.
 
-```text
-test-output/screenshots/
-```
+Since AI answers can sometimes differ from the table, the test passes if at least 60% of the answers match.
 
-### AIClassifier
+**To run it with the AI**
 
-Classifies a dream name as Good or Bad. See the **AI Validation** section below.
-
-## Test Coverage
-
-### Home Page
-
-1. Verify the My Dreams button is visible.
-2. Verify the loading animation appears and disappears.
-3. Verify the main page content becomes available after loading.
-4. Verify My Dreams opens the Dream Diary and Dream Summary pages in new tabs.
-
-### Dream Diary
-
-1. Verify exactly 10 dream entries are present.
-2. Verify every row contains:
-
-   * Dream Name
-   * Days Ago
-   * Dream Type
-3. Verify Dream Type is either Good or Bad.
-4. Verify recurring dreams:
-
-   * Flying over mountains
-   * Lost in maze
-
-### Dream Summary
-
-Verify:
-
-| Metric           | Expected |
-| ---------------- | -------: |
-| Good Dreams      |        6 |
-| Bad Dreams       |        4 |
-| Total Dreams     |       10 |
-| Recurring Dreams |        2 |
-
-### AI Validation (Bonus)
-
-Verify that the Good/Bad type of each dream name predicted by an AI model matches the Dream Type shown in the Dream Diary table.
-
-## AI Validation
-
-`AIValidationTest` reads every dream name from the Dream Diary table, asks an LLM to classify it as `Good` or `Bad`, and compares the answer with the Dream Type in the table.
-
-**How it works**
-
-1. The test opens the Dream Diary page and reads each dream name and its type.
-2. `AIClassifier` sends the dream name to the Groq API (OpenAI-compatible chat endpoint) using the `openai/gpt-oss-20b` model, asking for a single word: `Good` or `Bad`.
-3. The AI answer is compared with the table value, and each row is printed as `MATCH` or `MISMATCH`.
-4. Because AI answers can be subjective, the test passes when the agreement is at least 60 percent (configurable). In the latest run, **10 out of 10** dream types matched.
-
-Example console output:
-
-```text
-Monster chase     table=Bad   ai=Bad   source=LLM_API   MATCH
-Agreement: 10/10 (100%) | AI model used: yes
-```
-
-**Setup**
-
-1. Create a free API key at https://console.groq.com
-2. Set the key as an environment variable. The key is never stored in the repository.
+1. Make a free API key at https://console.groq.com
+2. Set it in the terminal before running the tests. The key is not saved in the project.
 
 PowerShell:
 
-```powershell
+```text
 $env:AI_API_KEY="your_key_here"
 ```
 
@@ -166,123 +113,58 @@ Command Prompt:
 set AI_API_KEY=your_key_here
 ```
 
-macOS / Linux:
+3. Run `mvn clean test` in the same terminal.
 
-```bash
-export AI_API_KEY=your_key_here
-```
+**If there is no key**
 
-3. Run the tests in the same terminal.
+If the key is missing or the API does not respond, the code switches to a simple keyword check (for example, "monster" means Bad) so the other tests still run. This backup is not AI, and the match check is only enforced when the AI model answered.
 
-**Optional settings**
+**Why Groq**
 
-| Variable / property | Purpose | Default |
-| ------------------- | ------- | ------- |
-| `AI_API_KEY` | API key | none |
-| `AI_MODEL` | Model name | `openai/gpt-oss-20b` |
-| `AI_BASE_URL` | OpenAI-compatible endpoint | `https://api.groq.com/openai/v1` |
-| `-Dai.min.agreement` | Minimum agreement (0 to 1) | `0.6` |
+I first tried a local Ollama model (llama3.2), but it crashed on my Windows machine. My OpenAI key was also out of quota, so I switched to Groq.
 
-**Fallback behaviour**
+## Running the tests
 
-If no API key is set, or the API call fails, `AIClassifier` falls back to simple keyword rules so that the test suite does not break. The fallback is **not** an AI model. The console output states which source produced each answer (`LLM_API` or `OFFLINE_RULES`), and the agreement check is enforced only when every answer came from the AI model.
-
-**Earlier attempts**
-
-A local Ollama model (`llama3.2`) was tried first, but the Ollama runtime failed with a Windows `llama-server` process error. A hosted OpenAI key was also out of quota. The Groq API was used instead.
-
-## Running the Tests
-
-Make sure Java 17 and Maven are installed.
-
-Open a terminal in the project root (the folder containing `pom.xml`).
-
-Run all tests:
+You need Java 17, Maven and Chrome. Open a terminal in the project folder (where `pom.xml` is) and run:
 
 ```bash
 mvn clean test
 ```
 
-Run only the AI validation test:
+To run only the AI test:
 
 ```bash
 mvn test -Dtest=AIValidationTest
 ```
 
-A successful execution should show:
+A good run ends with:
 
 ```text
 Tests run: 8, Failures: 0, Errors: 0, Skipped: 0
 BUILD SUCCESS
 ```
 
-## Test Reporting
+## Report
 
-Maven Surefire is used for test execution and reporting.
-
-Generate the HTML report using:
+I used the Maven Surefire report. To create it:
 
 ```bash
 mvn clean test surefire-report:report
 ```
 
-The generated report is available at:
+Open `target/site/surefire-report.html` in a browser.
 
-```text
-target/site/surefire-report.html
-```
+## Failure screenshots
 
-## Failure Screenshot
-
-When a test fails, `BaseTest` automatically captures a screenshot.
-
-Screenshots are saved under:
-
-```text
-test-output/screenshots/
-```
-
-The screenshot filename contains the failed test method name and timestamp.
-
-## Design Approach
-
-The automation separates test logic from page interaction logic using Page Object Model.
-
-Tests are responsible for:
-
-* Defining the expected behavior
-* Performing assertions
-* Logging test information
-
-Page classes are responsible for:
-
-* Locating web elements
-* Performing page actions
-* Reading page data
-
-This separation makes the test code easier to maintain when the UI changes.
-
-## Current Test Result
-
-The Selenium automation suite passes successfully:
-
-```text
-8 Tests
-0 Failures
-0 Errors
-0 Skipped
-BUILD SUCCESS
-```
+If a test fails, `BaseTest` saves a screenshot in `test-output/screenshots/`. The file name has the test name and a timestamp.
 
 ## Notes
 
-* The tests use explicit waits where synchronization is required, particularly for the loading animation and newly opened browser tabs.
-* ChromeDriver is managed using WebDriverManager, so a driver executable does not need to be manually downloaded.
-* The console may show a warning such as `Unable to find CDP implementation matching <version>`. This only means the installed Chrome is newer than the DevTools protocol bundled with Selenium. It does not affect these tests.
+* I used explicit waits (not fixed sleeps) for the loading animation and the new tabs.
+* You may see a warning like "Unable to find CDP implementation" in the console. It only means my Chrome is newer than the DevTools version in Selenium. It does not affect these tests.
 
-## Possible Future Improvements
+## What I would improve next
 
-* Allure reporting with screenshots attached to the report
-* Headless execution and a GitHub Actions workflow
-* Cross-browser runs
-* Moving the base URL to a configuration file
+* Add Allure reports and proper logging
+* Run the tests in headless mode and in CI
+* Move the website URL into a config file

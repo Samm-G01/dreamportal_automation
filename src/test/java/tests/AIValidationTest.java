@@ -53,11 +53,8 @@ public class AIValidationTest extends BaseTest {
 
         double agreement = (double) matches / total;
 
-        System.out.println("=== AI vs diary table ===");
-        lines.forEach(System.out::println);
-        System.out.printf("Agreement: %d/%d (%.0f%%) | AI model used: %s%n",
-                matches, total, agreement * 100,
-                allFromApi ? "yes" : "no (offline fallback)");
+        
+            
 
         // Only enforce agreement when a real AI model answered every dream
         if (allFromApi) {
